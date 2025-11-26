@@ -151,7 +151,8 @@ COMPOUND TRIGGER
 
 END trg_failed_login_alert;
 /
-![creating triggerr](https://github.com/user-attachments/assets/94788b52-7b52-4ac0-b77c-2717bcd2ac1f)
+![output2](https://github.com/user-attachments/assets/090897e3-74ca-4956-96c1-2daa7ace1ae2)
+
 
 ------------------------------------------------------------
 -- 5. TRIGGER TO SEND EMAIL AFTER ALERT
@@ -163,5 +164,201 @@ BEGIN
     send_security_email(:NEW.username, :NEW.failed_attempts);
 END;
 /
-![output](https://github.com/user-attachments/assets/b63c360c-bccb-4060-88a2-18fbf9df55e6)
+![creating triggerr](https://github.com/user-attachments/assets/94788b52-7b52-4ac0-b77c-2717bcd2ac1f)
+
+---
+
+Ouestion 2 
+# Hospital Management System (PL/SQL Package)
+
+## 🏥 Project Overview
+This project implements a **Hospital Management System** using Oracle PL/SQL. The goal is to **streamline patient management**, handle multiple patient records efficiently, and provide functionalities to **display information, manage admissions, and count admitted patients**.
+
+The system consists of **patients** and **doctors** tables, along with a **PL/SQL package** to perform bulk operations and queries efficiently.
+---
+
+## 📁 Database Tables
+
+-- Create patients table
+CREATE TABLE patients (
+    patient_id      NUMBER PRIMARY KEY,
+    patient_name    VARCHAR2(100),
+    age             NUMBER,
+    gender          VARCHAR2(10),
+    admitted_status VARCHAR2(3)   -- 'YES' or 'NO'
+);
+
+-- Create doctors table
+CREATE TABLE doctors (
+    doctor_id   NUMBER PRIMARY KEY,
+    doc_name    VARCHAR2(100),
+    specialty   VARCHAR2(50)
+);
+![tables created](https://github.com/user-attachments/assets/93dc995f-035b-439e-9540-c1390b43bfd1)
+
+
+
+## 📦 PL/SQL Package: `hospital_mgmt_pkg`
+
+CREATE OR REPLACE PACKAGE hospital_mgmt_pkg AS
+
+    -- Collection type to hold patient records
+    TYPE patient_rec IS RECORD (
+        patient_id      NUMBER,
+        patient_name    VARCHAR2(100),
+        age             NUMBER,
+        gender          VARCHAR2(10),
+        admitted_status VARCHAR2(3)
+    );
+
+    TYPE patient_table IS TABLE OF patient_rec;
+
+    -- Bulk insert patients
+    PROCEDURE bulk_load_patients(p_patients IN patient_table);
+
+    -- Return all patients as a cursor
+    FUNCTION show_all_patients RETURN SYS_REFCURSOR;
+
+    -- Count admitted patients
+    FUNCTION count_admitted RETURN NUMBER;
+
+    -- Admit a patient
+    PROCEDURE admit_patient(p_id NUMBER);
+
+END hospital_mgmt_pkg;
+/
+![creating package](https://github.com/user-attachments/assets/27557eca-2e54-4370-9bc9-3bcd3bd159b6)
+
+**procedure body**
+CREATE OR REPLACE PACKAGE BODY hospital_mgmt_pkg AS
+
+    -------------------------------------------------------------------
+    -- Bulk Load Patients
+    -------------------------------------------------------------------
+    PROCEDURE bulk_load_patients(p_patients IN patient_table) IS
+    BEGIN
+        FORALL i IN 1 .. p_patients.COUNT
+            INSERT INTO patients(patient_id, patient_name, age, gender, admitted_status)
+            VALUES (
+                p_patients(i).patient_id,
+                p_patients(i).patient_name,
+                p_patients(i).age,
+                p_patients(i).gender,
+                p_patients(i).admitted_status
+            );
+        
+        COMMIT;
+    END bulk_load_patients;
+
+    -------------------------------------------------------------------
+    -- Show All Patients
+    -------------------------------------------------------------------
+    FUNCTION show_all_patients RETURN SYS_REFCURSOR IS
+        l_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN l_cursor FOR
+            SELECT * FROM patients ORDER BY patient_id;
+        RETURN l_cursor;
+    END show_all_patients;
+
+    -------------------------------------------------------------------
+    -- Count Admitted Patients
+    -------------------------------------------------------------------
+    FUNCTION count_admitted RETURN NUMBER IS
+        l_count NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO l_count
+        FROM patients
+        WHERE admitted_status = 'YES';
+
+        RETURN l_count;
+    END count_admitted;
+
+    -------------------------------------------------------------------
+    -- Admit Patient
+    -------------------------------------------------------------------
+    PROCEDURE admit_patient(p_id NUMBER) IS
+    BEGIN
+        UPDATE patients
+        SET admitted_status = 'YES'
+        WHERE patient_id = p_id;
+
+        COMMIT;
+    END admit_patient;
+
+END hospital_mgmt_pkg;
+/
+![admitting patients](https://github.com/user-attachments/assets/edc03118-3863-4a7e-9bb8-42cab5fcbcd3)
+
+ **inserting patients**
+DECLARE
+    l_patients hospital_mgmt_pkg.patient_table := hospital_mgmt_pkg.patient_table();
+BEGIN
+    -- Extend collection
+    l_patients.EXTEND(3);
+
+    -- Patient 1
+    l_patients(1).patient_id := 101;
+    l_patients(1).patient_name := 'John Doe';
+    l_patients(1).age := 30;
+    l_patients(1).gender := 'Male';
+    l_patients(1).admitted_status := 'NO';
+
+    -- Patient 2
+    l_patients(2).patient_id := 102;
+    l_patients(2).patient_name := 'Mary Anne';
+    l_patients(2).age := 25;
+    l_patients(2).gender := 'Female';
+    l_patients(2).admitted_status := 'NO';
+
+    -- Patient 3
+    l_patients(3).patient_id := 103;
+    l_patients(3).patient_name := 'Patrick Smith';
+    l_patients(3).age := 44;
+    l_patients(3).gender := 'Male';
+    l_patients(3).admitted_status := 'NO';
+
+    -- Call bulk insert
+    hospital_mgmt_pkg.bulk_load_patients(l_patients);
+
+    DBMS_OUTPUT.PUT_LINE('Bulk insert completed.');
+END;
+/
+![inserting data](https://github.com/user-attachments/assets/8a027217-bdb3-4ccb-ab9e-c586fc435ae7)
+
+
+
+
+## 🧪 Test Scripts
+
+### 1. Bulk Load Patients
+- Insert multiple patient records at once using the `bulk_load_patients` procedure.
+
+### 2. Display Patients
+- Use the `show_all_patients` function to display all patients via cursor.
+
+### 3. Admit Patients
+- Call `admit_patient(patient_id)` to admit a patient.
+
+### 4. Count Admitted
+- Call `count_admitted` to verify the number of admitted patients.
+
+  outputs
+  ![procedure details](https://github.com/user-attachments/assets/c5d749d7-22b7-460c-a45b-8b9e36ae4b58)
+
+  ![output for doctors](https://github.com/user-attachments/assets/2f1aa0b9-d7b3-486f-87f3-a8c7a618209d)
+![out put](https://github.com/user-attachments/assets/ad71f37f-6581-47bd-8dd1-80bb93209d06)
+![inserting data](https://github.com/user-attachments/assets/4d72d0c3-4bf7-48fd-8f0a-f132f4dd893b)
+![inserting data  for doctor](https://github.com/user-attachments/assets/c21b52ff-fa56-481c-8391-1674f0d6f975)
+![calling bulk  inserts](https://github.com/user-attachments/assets/3794978f-84a1-4eda-af99-f4f8c007e491)
+
+
+---
+
+
+## 📚 References
+- Oracle PL/SQL documentation  
+- Class notes on bulk processing  
+- Online tutorials for PL/SQL packages and cursors
 
